@@ -45,10 +45,20 @@ const App: React.FC = () => {
    */
   const fetchTasks = async () => {
     try {
+      console.log('Fetching tasks...');
       const response = await axios.get<Task[]>('http://localhost:8080/api/tasks');
+      console.log('Tasks received:', response.data);
       setTasks(response.data);
     } catch (error) {
       console.error('Error fetching tasks:', error);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: any }; message?: string };
+        console.error('Error details:', {
+          status: axiosError.response?.status,
+          data: axiosError.response?.data,
+          message: axiosError.message
+        });
+      }
     }
   };
 
@@ -62,7 +72,8 @@ const App: React.FC = () => {
   const handleTaskCreate = async (task: Omit<Task, 'id'>) => {
     try {
       const response = await axios.post<Task>('http://localhost:8080/api/tasks', task);
-      setTasks([...tasks, response.data]);
+      // Refresh the task list to ensure we have the latest data
+      await fetchTasks();
     } catch (error) {
       console.error('Error creating task:', error);
     }

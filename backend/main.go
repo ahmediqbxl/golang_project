@@ -57,7 +57,12 @@ func main() {
 // It returns all tasks as a JSON response
 func getTasks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
+	// Convert map to slice for consistent ordering
+	taskList := make([]Task, 0, len(tasks))
+	for _, task := range tasks {
+		taskList = append(taskList, task)
+	}
+	json.NewEncoder(w).Encode(taskList)
 }
 
 // createTask handles POST requests to create a new task
