@@ -36,6 +36,74 @@ A full-stack task management application with React frontend and Go backend. The
 - Node.js 14 or higher
 - npm or yarn
 
+### Node.js and npm Installation
+1. Download Node.js:
+   - Visit [nodejs.org](https://nodejs.org/)
+   - Download the LTS (Long Term Support) version
+   - Run the installer as Administrator and follow these steps:
+     - Accept the license agreement
+     - Choose the default installation location (`C:\Program Files\nodejs`)
+     - Select the default components to install
+     - Check the box for "Automatically install the necessary tools"
+     - Check the box for "Add to PATH"
+     - Click Install
+
+2. Verify the installation:
+   - Close all open terminal windows
+   - Open a new terminal/command prompt
+   - Run the following commands to verify the installation:
+   ```bash
+   node --version
+   npm --version
+   ```
+   - You should see version numbers displayed for both commands
+
+3. Troubleshooting:
+   If you get "command not found" errors:
+   - Verify Node.js is installed in `C:\Program Files\nodejs`
+   - Check your PATH environment variable:
+     1. Press Windows + R
+     2. Type "sysdm.cpl" and press Enter
+     3. Go to "Advanced" tab
+     4. Click "Environment Variables"
+     5. Under "System Variables", find "Path"
+     6. Click "Edit"
+     7. Add `C:\Program Files\nodejs` if not present
+     8. Click "OK" on all windows
+   - Restart your computer
+   - Open a new terminal and try again
+
+4. Alternative Installation (if above steps don't work):
+   a. For Git Bash users (recommended):
+   ```bash
+   # Install nvm
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+   
+   # Add these lines to your ~/.bashrc file:
+   export NVM_DIR="$HOME/.nvm"
+   [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+   
+   # Close and reopen Git Bash, then run:
+   nvm install --lts
+   nvm use --lts
+   ```
+
+   b. For Windows Command Prompt/PowerShell users:
+   Install using nvm-windows:
+   1. Download nvm-windows from [nvm-windows releases](https://github.com/coreybutler/nvm-windows/releases)
+   2. Run the installer
+   3. Open a new terminal and run:
+   ```bash
+   nvm install latest
+   nvm use latest
+   ```
+   4. Verify installation with `node --version` and `npm --version`
+
+5. Update npm to the latest version (optional but recommended):
+   ```bash
+   npm install -g npm@latest
+   ```
+
 ### Backend Setup
 1. Navigate to the backend directory:
 ```bash
@@ -65,7 +133,12 @@ cd frontend
 npm install
 ```
 
-3. Start the development server:
+3. Install TypeScript type definitions:
+```bash
+npm install --save-dev @types/react @types/react-dnd @types/react-dnd-html5-backend @types/axios
+```
+
+4. Start the development server:
 ```bash
 npm start
 ```

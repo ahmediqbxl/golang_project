@@ -1,7 +1,16 @@
+/**
+ * TaskColumn component for displaying a column of tasks
+ * Implements drop functionality for drag-and-drop operations
+ */
 import React from 'react';
 import { useDrop } from 'react-dnd';
+import type { DropTargetMonitor } from 'react-dnd';
 import TaskCard from './TaskCard';
 
+/**
+ * Task interface defining the structure of a task
+ * @interface Task
+ */
 interface Task {
   id: string;
   title: string;
@@ -10,6 +19,10 @@ interface Task {
   dueDate: string;
 }
 
+/**
+ * Props interface for TaskColumn component
+ * @interface TaskColumnProps
+ */
 interface TaskColumnProps {
   title: string;
   tasks: Task[];
@@ -17,13 +30,20 @@ interface TaskColumnProps {
   onDelete: (id: string) => void;
 }
 
+/**
+ * TaskColumn functional component
+ * @param {TaskColumnProps} props - Component props
+ * @returns {JSX.Element} Column displaying tasks of a specific priority
+ */
 const TaskColumn: React.FC<TaskColumnProps> = ({ title, tasks, onUpdate, onDelete }) => {
+  // Drop functionality using react-dnd
   const [{ isOver }, drop] = useDrop(() => ({
     accept: 'task',
+    // Handle task drop by updating its priority
     drop: (item: Task) => {
-      onUpdate({ ...item, priority: title.toLowerCase().split(' ')[0] as 'high' | 'medium' | 'low' });
+      onUpdate({ ...item, priority: title.toLowerCase() as Task['priority'] });
     },
-    collect: (monitor) => ({
+    collect: (monitor: DropTargetMonitor) => ({
       isOver: !!monitor.isOver(),
     }),
   }));
@@ -31,10 +51,12 @@ const TaskColumn: React.FC<TaskColumnProps> = ({ title, tasks, onUpdate, onDelet
   return (
     <div
       ref={drop}
-      className={`column ${isOver ? 'column-over' : ''}`}
+      className={`task-column ${isOver ? 'drag-over' : ''}`}
     >
+      {/* Column title */}
       <h2>{title}</h2>
-      <div className="tasks">
+      {/* List of tasks in the column */}
+      <div className="task-list">
         {tasks.map((task) => (
           <TaskCard
             key={task.id}
