@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - MONGODB_URI=mongodb://admin:password@mongodb:27017/taskmanager?authSource=admin
+    networks:
+      - task-manager-network
+
+networks:
+  task-manager-network:
+    external: true 

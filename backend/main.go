@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -10,20 +11,45 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // Task represents a single task in the system
 // Fields are tagged for JSON serialization/deserialization
 type Task struct {
-	ID          string    `json:"id"`          // Unique identifier for the task
-	Title       string    `json:"title"`       // Title of the task
-	Description string    `json:"description"` // Detailed description of the task
-	Priority    string    `json:"priority"`    // Priority level of the task
-	DueDate     time.Time `json:"dueDate"`     // Due date of the task
+	ID          primitive.ObjectID `json:"id" bson:"_id,omitempty"`
+	Title       string             `json:"title" bson:"title"`
+	Description string             `json:"description" bson:"description"`
+	Priority    string             `json:"priority" bson:"priority"`
+	DueDate     time.Time          `json:"dueDate" bson:"dueDate"`
 }
 
-// tasks stores all tasks in memory using a map for O(1) access
-var tasks = make(map[string]Task)
+var client *mongo.Client
+var collection *mongo.Collection
+
+func init() {
+	// Set client options
+	clientOptions := options.Client().ApplyURI("mongodb://mongodb:27017")
+
+	// Connect to MongoDB
+	var err error
+	client, err = mongo.Connect(context.Background(), clientOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check the connection
+	err = client.Ping(context.Background(), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Get collection
+	collection = client.Database("taskmanager").Collection("tasks")
+}
 
 // main is the entry point of the application
 // It sets up the router, CORS configuration, and starts the HTTP server
@@ -57,12 +83,26 @@ func main() {
 // It returns all tasks as a JSON response
 func getTasks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	// Convert map to slice for consistent ordering
-	taskList := make([]Task, 0, len(tasks))
-	for _, task := range tasks {
-		taskList = append(taskList, task)
+
+	var tasks []Task
+	cur, err := collection.Find(context.Background(), bson.M{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	json.NewEncoder(w).Encode(taskList)
+	defer cur.Close(context.Background())
+
+	for cur.Next(context.Background()) {
+		var task Task
+		err := cur.Decode(&task)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		tasks = append(tasks, task)
+	}
+
+	json.NewEncoder(w).Encode(tasks)
 }
 
 // createTask handles POST requests to create a new task
@@ -74,10 +114,13 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Generate a unique ID using current timestamp
-	task.ID = time.Now().Format("20060102150405")
-	tasks[task.ID] = task
+	result, err := collection.InsertOne(context.Background(), task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	task.ID = result.InsertedID.(primitive.ObjectID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(task)
 }
@@ -86,7 +129,11 @@ func createTask(w http.ResponseWriter, r *http.Request) {
 // It updates the task with the given ID in memory
 func updateTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id := vars["id"]
+	id, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	var task Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
@@ -95,7 +142,11 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	task.ID = id
-	tasks[id] = task
+	_, err = collection.ReplaceOne(context.Background(), bson.M{"_id": id}, task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(task)
@@ -105,8 +156,17 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 // It deletes the task with the given ID from memory
 func deleteTask(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	id := vars["id"]
+	id, err := primitive.ObjectIDFromHex(vars["id"])
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	delete(tasks, id)
+	_, err = collection.DeleteOne(context.Background(), bson.M{"_id": id})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.WriteHeader(http.StatusNoContent)
 }
