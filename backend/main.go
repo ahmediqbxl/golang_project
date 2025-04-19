@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -31,8 +32,14 @@ var client *mongo.Client
 var collection *mongo.Collection
 
 func init() {
+	// Get MongoDB URI from environment variable
+	mongoURI := os.Getenv("MONGODB_URI")
+	if mongoURI == "" {
+		mongoURI = "mongodb://admin:password@mongodb:27017/taskmanager?authSource=admin"
+	}
+
 	// Set client options
-	clientOptions := options.Client().ApplyURI("mongodb://mongodb:27017")
+	clientOptions := options.Client().ApplyURI(mongoURI)
 
 	// Connect to MongoDB
 	var err error
